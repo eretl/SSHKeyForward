@@ -25,7 +25,10 @@ Na WSL nainstalujte balíček socat.
 Na Windows stáhněte do složky C:\ssh soubor npiperelay z odkazu.
 
 Do ~/.bash_rc
-`socat EXEC:"/mnt/c/ssh/npiperelay.exe /\/\./\pipe/\ssh-pageant" UNIX-LISTEN:/tmp/wsl-ssh-pageant.socket,unlink-close,unlink-early,fork`
+`#SSH propojeni 
+/usr/bin/killall socat &> /dev/null  
+/usr/bin/socat EXEC:"/mnt/c/ssh/npiperelay.exe /\/\./\pipe/\ssh-pageant" UNIX-LISTEN:/tmp/wsl-ssh-pageant.socket,unlink-close,unlink-early,fork &  
+export SSH_AUTH_SOCK=/tmp/wsl-ssh-pageant.socket  `
 
 
 ## Test

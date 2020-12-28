@@ -26,9 +26,13 @@ Na Windows stáhněte do složky C:\ssh soubor npiperelay z odkazu.
 
 Do ~/.bash_rc  
 ``` #SSH propojeni  
-/usr/bin/killall socat &> /dev/null  
-/usr/bin/socat EXEC:"/mnt/c/ssh/npiperelay.exe /\/\./\pipe/\ssh-pageant" UNIX-LISTEN:/tmp/wsl-ssh-pageant.socket,unlink-close,unlink-early,fork &    
+#X11
+export DISPLAY=$(ip r l default | grep -E -o "([0-9]{1,3}[\.]){3}[0-9]{1,3}"):0.0
+#SSH
+/usr/bin/killall socat &> /dev/null
+/usr/bin/socat EXEC:"/mnt/c/ssh/npiperelay.exe /\/\./\pipe/\ssh-pageant" UNIX-LISTEN:/tmp/wsl-ssh-pageant.socket,unlink-close,unlink-early,fork &
 export SSH_AUTH_SOCK=/tmp/wsl-ssh-pageant.socket
+cd ~
 ```
 
 

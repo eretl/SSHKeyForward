@@ -1,41 +1,56 @@
 # SSHKeyForward
-Sdílení privátní klíčů z KeePassXC do peagantu a následně do OpenSSH na windows, nebo WSL2
+Share private keys from KeePassXC to Windows OpenSSH agent and from there to WSL2.
 
-## Nastavení KeePassXC
-V nástroje -> nastavení -> SSH agent je nutné zapnout integraci s SSH agentem (Pagent již musí běžet, jinak skončí s chybou).  
-KeePassXC podporuje privátní klíče ve formátu OpenSSH, nikoliv ve formátu PPK, který generuje putty, proto je nutno tento formát převést.  
-Následně lze přidat tento soubor jako vlastnost záznamu v seznamu hesel.
-V upravě záznamu se objeví nová možnost SSH agent, kde nastavíte jako přílohu privátní klíč a také zaškrtnete přidání a odebrání klíče při zamčení.  
+## Enable Windows OpenSSH agent service
+```
+#Set the sshd service to be started automatically
+Get-Service -Name sshd | Set-Service -StartupType Automatic
 
-## Nastavení CMD
-`set SSH_AUTH_SOCK=\\.\pipe\ssh-pageant`
-
-## Nastavení  WSL-SSH-pageant
-https://github.com/benpye/wsl-ssh-pageant
-Stáhnout do složky C:\ssh
-
-Příkaz při staru windows 
-`wsl-ssh-pageant-amd64.exe --systray --winssh ssh-pageant`
-
-## Nastavení WSL2
-https://github.com/jstarks/npiperelay
-Na WSL nainstalujte balíček socat.
-`apt install socat`
-
-Na Windows stáhněte do složky C:\ssh soubor npiperelay z odkazu.
-
-Do ~/.bash_rc  
-``` #SSH propojeni  
-#X11
-export DISPLAY=$(ip r l default | grep -E -o "([0-9]{1,3}[\.]){3}[0-9]{1,3}"):0.0
-#SSH
-/usr/bin/killall socat &> /dev/null
-/usr/bin/socat EXEC:"/mnt/c/ssh/npiperelay.exe /\/\./\pipe/\ssh-pageant" UNIX-LISTEN:/tmp/wsl-ssh-pageant.socket,unlink-close,unlink-early,fork &
-export SSH_AUTH_SOCK=/tmp/wsl-ssh-pageant.socket
-cd ~
+# Now start the sshd service
+Start-Service sshd
 ```
 
+## KeePassXC Setup
+Tools -> Settings -> SSH Agent
+* Enable SSH Agent integration
+* Use OpenSSH for Windows instead of Pageant
+![KeePassXC SSH Agent](/imgs/keepassxc.png)
+
+KeePassXC supports private keys in OpenSSH format. Key files can be addded to entry in advanced section -> attachments.
+
+After adding SSH key to entry new menu button "SSH Agent" will be displayed. There you can check information about the key. 
+
+## WSL2 Setup
+Install socat package
+`apt install socat`
+
+Create .ssh folder in $home
+`mkdir $HOME/.ssh`
+
+Download latest npiperelay, unzip it and put npiperelay.exe in $HOME/.ssh
+https://github.com/jstarks/npiperelay/releases/latest
+
+```
+wget https://github.com/jstarks/npiperelay/releases/download/v0.1.0/npiperelay_windows_amd64.zip
+unzip npiperelay_windows_amd64.zip
+mv npiperelay.exe $HOME/.ssh
+```
+
+Add to end of .bashrc in $HOME
+
+```
+export SSH_AUTH_SOCK=$HOME/.ssh/agent.sock
+
+ss -a | grep -q $SSH_AUTH_SOCK
+if [ $? -ne 0 ]; then
+    rm -f $SSH_AUTH_SOCK
+    (setsid socat UNIX-LISTEN:$SSH_AUTH_SOCK,fork EXEC:"$HOME/.ssh/npiperelay.exe -ei -s //./pipe/openssh-ssh-agent",nofork &) >/dev/null 2>&1
+fi
+```
+
+Relaunch WSL2 shell after editing .bashrc.
 
 ## Test
-V pegant by si měli zobrazovat klíče podle toho jak je načte KeePassXC.
-V CMD a Linuxu by měl příkaz `ssh-add -L` zobrazit seznam dostupných klíčů.
+* Add identity from KeePassXC to SSH Agent (Right click on Entry -> Add key to SSH Agent)
+* Check SSH agent on Windows `ssh-add -L`
+* Check SSH agent on WSL2 `ssh-add -L`
